@@ -37,20 +37,6 @@ async function fetchAndAnalyzeRunners(page) {
         const [lastName, firstName] = runner.split(' ');
         return getItraFromRunner(lastName, firstName)
     }));
-    // for (let runner of runners) {
-    //     try {
-    //         const [lastName, firstName] = runner.split(' ');
-    //         const data = await getItraFromRunner(lastName, firstName);
-    //         if (data.results.length > 0) {
-    //             const runnerData = data.results[0];
-    //             results.push({ lastName, firstName, itra: runnerData.pi });
-    //             console.log("Runner " + runnerData.firstName + " " + runnerData.lastName + " with ITRA " + runnerData.pi)
-    //         }
-    //     }
-    //     catch (err) {
-    //         console.log(err)
-    //     }
-    // }
     return results;
 }
 
@@ -62,7 +48,8 @@ async function getAllRunners() {
 
     let optionValue = await page.$$eval('option', options => options.find(o => o.innerText === "Le Malpassant")?.value)
     await page.select('select#competitions', optionValue);
-    await page.keyboard.press('Enter');
+    let optionItemPerPage = await page.$$eval('option', options => options.find(o => o.innerText === '100')?.value)
+    await page.select('select#items_per_page', optionItemPerPage);
 
     var results = []; // variable to hold collection of all book titles and prices
     let lastPage;
@@ -74,13 +61,12 @@ async function getAllRunners() {
         const tmp = await fetchAndAnalyzeRunners(page);
         results = results.concat(...tmp);
 
-        lastPage = 5;
-        // lastPage = await page.evaluate(() => {
-        //     return document.querySelector('li.next-page.disabled');
-        // });
-        // if (!lastPage) {
-        //     await page.click('li.next-page > a');
-        // }
+        lastPage = await page.evaluate(() => {
+            return document.querySelector('li.next-page.disabled');
+        });
+        if (!lastPage) {
+            await page.click('li.next-page > a');
+        }
 
     }
     await browser.close();

@@ -1,6 +1,6 @@
 function fetchRunners() {
     var apiUrl = 'http://localhost:3000/api/fetch-runners';
-    document.getElementById("loading").style.display = "none"
+    document.getElementById("loading").style.display = "block";
     fetch(apiUrl).then(response => {
         return response.json();
     }).then(data => {
@@ -13,7 +13,7 @@ function fetchRunners() {
 };
 
 function showResults(data) {
-    document.getElementById("loading").style.display = "block"
+    document.getElementById("loading").style.display = "none";
     const resultsContainer = document.getElementById("results");
     data
         .reduce((acc, x) => acc.concat(x.results.length > 1 ? [x.results[0]] : x.results), [])
@@ -23,9 +23,9 @@ function showResults(data) {
             if (a.pi < b.pi) return 1;
             return 0;
         })
-        .forEach(runner => {
+        .forEach((runner, index) => {
             const runnerElement = document.createElement('p');
-            runnerElement.innerText = `Runner ${runner.lastName} ${runner.firstName} with ITRA ${runner.pi}`;
+            runnerElement.innerText = `${index} - ${runner.firstName} ${runner.lastName} with ITRA ${runner.pi}`;
             resultsContainer.append(runnerElement);
         });
 }
