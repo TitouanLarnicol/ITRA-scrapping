@@ -58,7 +58,7 @@ async function fetchAndAnalyzeRunners(page) {
 async function getAllRunners() {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
-    await page.goto(URL, { timeout: 0 });
+    await page.goto(URL);
 
     let optionValue = await page.$$eval('option', options => options.find(o => o.innerText === "Le Malpassant")?.value)
     await page.select('select#competitions', optionValue);

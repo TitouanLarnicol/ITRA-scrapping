@@ -15,12 +15,17 @@ function fetchRunners() {
 function showResults(data) {
     document.getElementById("loading").style.display = "block"
     const resultsContainer = document.getElementById("results");
-    data.forEach(runnerData => {
-        if (runnerData.results.length > 0) {
-            const runner = runnerData.results[0];
+    data
+        .reduce((acc, x) => acc.concat(x.results.length > 1 ? [x.results[0]] : x.results), [])
+        .filter(runner => runner.pi > 0)
+        .sort((a, b) => {
+            if (a.pi > b.pi) return -1;
+            if (a.pi < b.pi) return 1;
+            return 0;
+        })
+        .forEach(runner => {
             const runnerElement = document.createElement('p');
             runnerElement.innerText = `Runner ${runner.lastName} ${runner.firstName} with ITRA ${runner.pi}`;
             resultsContainer.append(runnerElement);
-        }
-    });
+        });
 }
