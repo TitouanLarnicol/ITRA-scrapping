@@ -55,36 +55,38 @@ async function fetchAndAnalyzeRunners(page) {
 }
 
 // invoking the main function
-function _init() {
-    (async () => {
-        const browser = await puppeteer.launch({ headless: false });
-        const page = await browser.newPage();
-        await page.goto(URL);
+async function getAllRunners() {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(URL, { timeout: 0 });
 
-        let optionValue = await page.$$eval('option', options => options.find(o => o.innerText === "Le Malpassant")?.value)
-        await page.select('select#competitions', optionValue);
-        await page.keyboard.press('Enter');
+    let optionValue = await page.$$eval('option', options => options.find(o => o.innerText === "Le Malpassant")?.value)
+    await page.select('select#competitions', optionValue);
+    await page.keyboard.press('Enter');
 
-        var results = []; // variable to hold collection of all book titles and prices
-        let lastPage;
-        // defined simple loop to iterate over number of catalogue pages
-        while (!lastPage) {
-            // wait 1 sec for page load
-            await page.waitFor(2000);
+    var results = []; // variable to hold collection of all book titles and prices
+    let lastPage;
+    // defined simple loop to iterate over number of catalogue pages
+    while (!lastPage) {
+        // wait 1 sec for page load
+        await page.waitFor(2000);
 
-            const tmp = await fetchAndAnalyzeRunners(page);
-            results = results.concat(...tmp);
+        const tmp = await fetchAndAnalyzeRunners(page);
+        results = results.concat(...tmp);
 
-            lastPage = await page.evaluate(() => {
-                return document.querySelector('li.next-page.disabled');
-            });
-            if (!lastPage) {
-                await page.click('li.next-page > a');
-            }
+        lastPage = 5;
+        // lastPage = await page.evaluate(() => {
+        //     return document.querySelector('li.next-page.disabled');
+        // });
+        // if (!lastPage) {
+        //     await page.click('li.next-page > a');
+        // }
 
-        }
-        await browser.close();
-    })();
+    }
+    await browser.close();
+    return results;
 }
 
-_init();
+module.exports = {
+    getAllRunners
+}
