@@ -1,6 +1,10 @@
 const fetch = require('node-fetch');
 const puppeteer = require('puppeteer');
 
+// URL for data
+const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
+const ITRA_URL = "https://itra.run/api/runner/find";
+
 const getItraFromRunner = (lastName, firstName) => {
     var myHeaders = new fetch.Headers();
     myHeaders.append("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -18,11 +22,6 @@ const getItraFromRunner = (lastName, firstName) => {
         .then(response => response.json())
         .catch(error => console.log('error', error));
 }
-
-
-// URL for data
-const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
-const ITRA_URL = "https://itra.run/api/runner/find";
 
 async function fetchAndAnalyzeRunners(page) {
     const runners = await page.evaluate(() => {

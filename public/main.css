@@ -9,14 +9,6 @@ body {
     height: 100%;
 }
 
-body {
-    border: red 2px solid;
-}
-
-html {
-    border: green 2px solid;
-}
-
 h1 {
     margin: 0;
 }
