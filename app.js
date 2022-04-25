@@ -1,7 +1,7 @@
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
-var runnerFile = require('./public/fetchRunners')
+var runnerFile = require('./public/js/fetchRunners')
 
 http.createServer(async function (request, response) {
     var filePath = '.' + request.url;

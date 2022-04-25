@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <link rel="stylesheet" href="/public/main.css">
-    </head>
+<head>
+    <link rel="stylesheet" href="/public/css/reset.css">
+    <link rel="stylesheet" href="/public/css/main.css">
+</head>
 <body>
-    <div class="container">
-        <h1>Get your future result</h1>
-        <button onclick="fetchRunners()">Click here to get your result</button>
+    <div class="header">
+        <input placeholder="https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list"/>
+        <input placeholder="Nom de la course"/>
+        <button onclick="fetchRunners()" class="cta">
+            <span>Analyser</span>
+            <svg viewBox="0 0 13 10" height="10px" width="15px">
+              <path d="M1,5 L11,5"></path>
+              <polyline points="8 1 12 5 8 9"></polyline>
+            </svg>
+          </button>
+    </div>
+    <div class="main">
         <div id='results'></div>
         <p id="loading" style="display: none;">Loading</p>
     </div>
 
 </body>
-<script src="/public/api.js" type="text/javascript"></script>
+<script src="/public/js/api.js" type="text/javascript"></script>
 </html>
