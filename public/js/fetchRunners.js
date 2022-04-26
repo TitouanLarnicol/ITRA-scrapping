@@ -51,15 +51,16 @@ async function getAllRunners() {
     await page.select('select#items_per_page', optionItemPerPage);
 
     var results = []; // variable to hold collection of all book titles and prices
-    let lastPage;
+    let lastPage = 0;
     // defined simple loop to iterate over number of catalogue pages
-    while (!lastPage) {
+    while (lastPage < 2) {
         // wait 1 sec for page load
         await page.waitFor(2000);
 
         const tmp = await fetchAndAnalyzeRunners(page);
         results = results.concat(...tmp);
 
+        lastPage++;
         lastPage = await page.evaluate(() => {
             return document.querySelector('li.next-page.disabled');
         });
