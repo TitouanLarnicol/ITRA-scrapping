@@ -1,11 +1,11 @@
-const fetch = require('node-fetch');
 const puppeteer = require('puppeteer');
+const fetch = require('node-fetch');
 
 // URL for data
 const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
 const ITRA_URL = "https://itra.run/api/runner/find";
 
-const getItraFromRunner = (lastName, firstName) => {
+const getItraFromRunner = async (lastName, firstName) => {
     var myHeaders = new fetch.Headers();
     myHeaders.append("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
     myHeaders.append("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36");
@@ -17,10 +17,16 @@ const getItraFromRunner = (lastName, firstName) => {
         body: raw,
         redirect: 'follow'
     };
-
-    return fetch(ITRA_URL, requestOptions)
-        .then(response => response.json())
-        .catch(error => console.log('error', error));
+    const runner = await fetch(ITRA_URL, requestOptions)
+        .then(response => {
+            if (response.ok) {
+                return response.json()
+            } else {
+                return Promise.reject()
+            }
+        })
+        .catch(e => Promise.reject(e));
+    return runner;
 }
 
 async function fetchAndAnalyzeRunners(page) {
@@ -32,11 +38,13 @@ async function fetchAndAnalyzeRunners(page) {
                 : (acc ? `${acc},${val}` : `${val}`), '').split(',')
     });
 
-    const results = await Promise.all(runners.map(runner => {
-        const [lastName, firstName] = runner.split(' ');
-        return getItraFromRunner(lastName, firstName)
-    }));
-    return results;
+    const resolvedResults = await Promise.allSettled(
+        runners.map(runner => {
+            const [lastName, firstName] = runner.split(' ');
+            return getItraFromRunner(lastName, firstName);
+        })
+    );
+    return resolvedResults.filter(response => response.status == 'fulfilled').map(res => res.value);
 }
 
 // invoking the main function
@@ -53,14 +61,14 @@ async function getAllRunners() {
     var results = []; // variable to hold collection of all book titles and prices
     let lastPage = 0;
     // defined simple loop to iterate over number of catalogue pages
-    while (lastPage < 2) {
+    while (lastPage < 1) {
         // wait 1 sec for page load
         await page.waitFor(2000);
 
         const tmp = await fetchAndAnalyzeRunners(page);
+        console.log('tmp', tmp)
         results = results.concat(...tmp);
 
-        lastPage++;
         lastPage = await page.evaluate(() => {
             return document.querySelector('li.next-page.disabled');
         });

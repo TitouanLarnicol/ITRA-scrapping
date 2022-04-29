@@ -5,10 +5,17 @@ var runnerFile = require('./public/js/fetchRunners')
 
 http.createServer(async function (request, response) {
     var filePath = '.' + request.url;
+    const headers = {
+        "Content-Type": "application/json",
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+        'Access-Control-Max-Age': 2592000, // 30 days
+        /** add other headers as per requirement */
+    };
     if (request.url === "/api/fetch-runners" && request.method === "GET") {
         const result = await runnerFile.getAllRunners();
         //response headers
-        response.writeHead(200, { "Content-Type": "application/json" });
+        response.writeHead(200, headers);
         //set the response
         response.write(JSON.stringify(result));
         //end the response
