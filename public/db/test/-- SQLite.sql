@@ -1,5 +1,5 @@
 -- SQLite
-INSERT INTO races(url, raceName) VALUES ('https://test.com', 'Le Malpassant');
+INSERT INTO races(url, raceName) VALUES ('https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list', 'Le Malpassant');
 
 SELECT * FROM races;
 -- Delete FROm races where raceId = 2

@@ -1,6 +1,9 @@
-const express = require('express')
-var runnerFile = require('./public/fetchRunners');
-const db = require('./public/db/connect');
+import express from "express";
+import getAllRunners from './public/fetchRunners.js';
+import * as dbQuery from './public/db/connect.js';
+import sqlite3 from "sqlite3";
+
+const db = new sqlite3.Database('db.sqlite');
 
 const PORT = process.env.port || 3000;
 const app = express();
@@ -15,7 +18,7 @@ app.get('/api/fetch-runners', async (req, res) => {
         'Access-Control-Max-Age': 2592000, // 30 days
         /** add other headers as per requirement */
     };
-    const result = await runnerFile.getAllRunners();
+    const result = await getAllRunners();
     //response headers
     res.writeHead(200, headers);
     //set the response
@@ -26,4 +29,4 @@ app.get('/api/fetch-runners', async (req, res) => {
 
 app.listen(PORT, () => console.log("SERVER STARTED PORT: ", PORT))
 
-db._initSQL();
+dbQuery._initSQL(db);

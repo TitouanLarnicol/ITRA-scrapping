@@ -1,10 +1,20 @@
-const puppeteer = require('puppeteer');
-const fetch = require('node-fetch');
+import puppeteer from 'puppeteer';
+import fetch from 'node-fetch';
+import * as dbQuery from './db/connect.js'
+import sqlite3 from "sqlite3";
+
+const db = new sqlite3.Database('db.sqlite');
 
 // URL for data
 const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
 const ITRA_URL = "https://itra.run/api/runner/find";
 
+/**
+ * Make API call to itra.com to retrieve runner information
+ * @param {*} lastName 
+ * @param {*} firstName 
+ * @returns 
+ */
 const getItraFromRunner = async (lastName, firstName) => {
     var myHeaders = new fetch.Headers();
     myHeaders.append("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -29,6 +39,11 @@ const getItraFromRunner = async (lastName, firstName) => {
     return runner;
 }
 
+/**
+ * Iterate over every td element in the table to retrieve last and first name.
+ * @param {*} page 
+ * @returns 
+ */
 async function fetchAndAnalyzeRunners(page) {
     const runners = await page.evaluate(() => {
         const tds = Array.from(document.querySelectorAll('table tr td:nth-child(-n + 2)'))
@@ -47,8 +62,17 @@ async function fetchAndAnalyzeRunners(page) {
     return resolvedResults.filter(response => response.status == 'fulfilled').map(res => res.value);
 }
 
-// invoking the main function
-async function getAllRunners() {
+function retrieveDbData(url, raceName) {
+    return dbQuery.getRunnersByRace(db, url, raceName);
+}
+
+export default async function getAllRunners(url, raceName) {
+    const existingData = retrieveDbData(url, raceName);
+    console.log(existingData)
+    if (existingData.length) {
+        return existingData;
+    }
+
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(URL);
@@ -58,9 +82,8 @@ async function getAllRunners() {
     let optionItemPerPage = await page.$$eval('option', options => options.find(o => o.innerText === '100')?.value)
     await page.select('select#items_per_page', optionItemPerPage);
 
-    var results = []; // variable to hold collection of all book titles and prices
+    var results = []; // variable to hold collection of all runners
     let lastPage = 0;
-    // defined simple loop to iterate over number of catalogue pages
     while (lastPage < 1) {
         // wait 1 sec for page load
         await page.waitFor(2000);
@@ -78,9 +101,6 @@ async function getAllRunners() {
 
     }
     await browser.close();
-    return results;
-}
 
-module.exports = {
-    getAllRunners
+    return results;
 }

@@ -1,17 +1,13 @@
-const sqlite3 = require("sqlite3")
-
-const db = new sqlite3.Database('db.sqlite');
-
-function addRace() {
+export function addRace(db, url, raceName) {
     db.serialize(function () {
         db.run(
-            'INSERT',
+            `INSERT INTO races(url, raceName) VALUES ('${url}', '${raceName}');`,
             dbCallback
         )
     });
 }
 
-function getRunnersByRace(raceName) {
+export function getRunnersByRace(db, raceName) {
     db.serialize(function () {
         db.all(
             `SELECT runners.*
@@ -24,7 +20,7 @@ function getRunnersByRace(raceName) {
     })
 }
 
-function getAllRunners() {
+export function getAllRunners(db) {
     db.serialize(function () {
         db.all(
             `SELECT *
@@ -34,7 +30,7 @@ function getAllRunners() {
     })
 }
 
-function _initSQL() {
+export function _initSQL(db) {
     db.serialize(function () {
         // runners
         db.run(`CREATE TABLE IF NOT EXISTS runners (
@@ -74,17 +70,12 @@ function _initSQL() {
             dbCallback
         );
     });
-    getRunnersByRace('Le Malpassant');
 }
 
-function dbCallback(err, row) {
+export function dbCallback(err, row) {
     if (err) {
         console.log('err', err)
     } else {
         console.log('row', row)
     }
-}
-
-module.exports = {
-    _initSQL
 }
