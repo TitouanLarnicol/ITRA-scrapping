@@ -1,16 +1,22 @@
 import express from "express";
 import getAllRunners from './public/fetchRunners.js';
-import * as dbQuery from './public/db/connect.js';
-import sqlite3 from "sqlite3";
-
-const db = new sqlite3.Database('db.sqlite');
+import cors from 'cors';
 
 const PORT = process.env.port || 3000;
 const app = express();
 
+const allowedOrigins = ['http://localhost:8080'];
+
+const options = {
+    origin: allowedOrigins
+};
+
+app.use(cors(options))
+app.use(express.json());
+
 app.get('/', (req, res) => res.send('Welcome on Itra Comparator API'));
 
-app.get('/api/fetch-runners', async (req, res) => {
+app.post('/api/fetch-runners', async (req, res) => {
     const headers = {
         "Content-Type": "application/json",
         'Access-Control-Allow-Origin': '*',
@@ -18,7 +24,8 @@ app.get('/api/fetch-runners', async (req, res) => {
         'Access-Control-Max-Age': 2592000, // 30 days
         /** add other headers as per requirement */
     };
-    const result = await getAllRunners();
+    console.log(req.body.raceName)
+    const result = await getAllRunners(req.body.raceName);
     //response headers
     res.writeHead(200, headers);
     //set the response
@@ -28,5 +35,3 @@ app.get('/api/fetch-runners', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log("SERVER STARTED PORT: ", PORT))
-
-dbQuery._initSQL(db);

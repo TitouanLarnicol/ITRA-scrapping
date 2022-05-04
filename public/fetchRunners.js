@@ -1,9 +1,8 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
-import * as dbQuery from './db/connect.js'
-import sqlite3 from "sqlite3";
+import { DatabaseService } from './db/connect.js';
 
-const db = new sqlite3.Database('db.sqlite');
+const dbService = new DatabaseService();
 
 // URL for data
 const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
@@ -62,13 +61,8 @@ async function fetchAndAnalyzeRunners(page) {
     return resolvedResults.filter(response => response.status == 'fulfilled').map(res => res.value);
 }
 
-function retrieveDbData(url, raceName) {
-    return dbQuery.getRunnersByRace(db, url, raceName);
-}
-
-export default async function getAllRunners(url, raceName) {
-    const existingData = retrieveDbData(url, raceName);
-    console.log(existingData)
+export default async function getAllRunners(raceName) {
+    const existingData = await dbService.getRunnersByRace(raceName);
     if (existingData.length) {
         return existingData;
     }
@@ -89,7 +83,6 @@ export default async function getAllRunners(url, raceName) {
         await page.waitFor(2000);
 
         const tmp = await fetchAndAnalyzeRunners(page);
-        console.log('tmp', tmp)
         results = results.concat(...tmp);
 
         lastPage = await page.evaluate(() => {
@@ -102,5 +95,9 @@ export default async function getAllRunners(url, raceName) {
     }
     await browser.close();
 
-    return results;
+    return mapData(results);
+}
+
+function mapData(data) {
+    return data.reduce((acc, x) => acc.concat(x.results.length > 1 ? [x.results[0]] : x.results), []).filter(runner => runner.pi > 0)
 }
