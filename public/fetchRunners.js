@@ -1,12 +1,16 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
 import { DatabaseService } from './db/connect.js';
+import { analyzeLiveTrail } from './livetrail.js';
+import { analyzeLiveTrack } from './livetrack.js';
 
 const dbService = new DatabaseService();
 
 // URL for data
 const EXAMPLE_URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
 const ITRA_URL = "https://itra.run/api/runner/find";
+const LIVE_TRAIL = 'registrations-list';
+const LIVE_TRACK = 'livetrack.me';
 
 /**
  * Make API call to itra.com to retrieve runner information
@@ -19,7 +23,8 @@ const getItraFromRunner = async (lastName, firstName) => {
     myHeaders.append("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
     myHeaders.append("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36");
 
-    var raw = "name=" + firstName + "+" + lastName + "&nationality=&start=1&count=10&echoToken=0.060678191186619435";
+    var raw = "name=" + firstName + "+" + lastName + "&start=1&count=10&echoToken=0.060678191186619435";
+    console.log('request', raw)
     var requestOptions = {
         method: 'POST',
         headers: myHeaders,
@@ -38,23 +43,6 @@ const getItraFromRunner = async (lastName, firstName) => {
     return runner;
 }
 
-/**
- * Iterate over every td element in the table to retrieve last and first name.
- * @param {*} page 
- * @returns 
- */
-async function retrieveNames(page) {
-    const runners = await page.evaluate(() => {
-        const tds = Array.from(document.querySelectorAll('table tr td:nth-child(-n + 2)'))
-        return tds.map(p => p.innerText).reduce((acc, val, idx) =>
-            idx % 2 !== 0
-                ? (acc ? `${acc} ${val}` : `${val}`)
-                : (acc ? `${acc},${val}` : `${val}`), '').split(',')
-    });
-
-    return runners;
-}
-
 export default async function getAllRunners(raceName, url) {
     console.log(raceName, url)
     const existingData = await dbService.getRunnersByRace(raceName);
@@ -62,50 +50,28 @@ export default async function getAllRunners(raceName, url) {
         return existingData;
     }
 
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(url);
-
-    page.on('console', async (msg) => {
-        const msgArgs = msg.args();
-        for (let i = 0; i < msgArgs.length; ++i) {
-            console.log(await msgArgs[i].jsonValue());
-        }
-    });
-
-    let optionValue = await page.$$eval('option', (options, raceName) => {
-        return options.find(o => o.innerText === raceName)?.value;
-    }, raceName)
-    await page.select('select#competitions', optionValue);
-    let optionItemPerPage = await page.$$eval('option', options => options.find(o => o.innerText === '100')?.value)
-    await page.select('select#items_per_page', optionItemPerPage);
-
-    var namesList = []; // variable to hold collection of all runners
-    let lastPage;
-    while (!lastPage) {
-        // wait 1 sec for page load
-        await page.waitFor(2000);
-
-        const results = await retrieveNames(page);
-        namesList = namesList.concat(...results);
-
-        lastPage = await page.evaluate(() => {
-            return document.querySelector('li.next-page.disabled');
-        });
-        if (!lastPage) {
-            await page.click('li.next-page > a');
-        }
+    let nameList = [];
+    if (url.includes(LIVE_TRACK)) {
+        nameList = await analyzeLiveTrack(page);
+    } else {
+        nameList = await analyzeLiveTrail(page);
     }
+
     await browser.close();
-    const results = await retrieveItraFromRunner(namesList);
+
+    const results = await retrieveItraFromRunner(nameList);
 
     return mapData(results);
 }
 
 async function retrieveItraFromRunner(namesList) {
+    console.log('first', namesList[0])
     const resolvedResults = await Promise.allSettled(
         namesList.map(runner => {
-            const [lastName, firstName] = runner.split(' ');
+            const [lastName, firstName] = runner.toString().split(' ');
             return getItraFromRunner(lastName, firstName);
         })
     );
