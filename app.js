@@ -16,6 +16,9 @@ app.use(express.json());
 
 app.get('/', (req, res) => res.send('Welcome on Itra Comparator API'));
 
+/**
+ * Body expected: { raceName: string, url: string }
+ */
 app.post('/api/fetch-runners', async (req, res) => {
     const headers = {
         "Content-Type": "application/json",
@@ -24,8 +27,7 @@ app.post('/api/fetch-runners', async (req, res) => {
         'Access-Control-Max-Age': 2592000, // 30 days
         /** add other headers as per requirement */
     };
-    console.log(req.body.raceName)
-    const result = await getAllRunners(req.body.raceName);
+    const result = await getAllRunners(req.body.raceName, req.body.url);
     //response headers
     res.writeHead(200, headers);
     //set the response

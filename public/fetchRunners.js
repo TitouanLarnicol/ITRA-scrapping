@@ -5,7 +5,7 @@ import { DatabaseService } from './db/connect.js';
 const dbService = new DatabaseService();
 
 // URL for data
-const URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
+const EXAMPLE_URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
 const ITRA_URL = "https://itra.run/api/runner/find";
 
 /**
@@ -43,7 +43,7 @@ const getItraFromRunner = async (lastName, firstName) => {
  * @param {*} page 
  * @returns 
  */
-async function fetchAndAnalyzeRunners(page) {
+async function retrieveNames(page) {
     const runners = await page.evaluate(() => {
         const tds = Array.from(document.querySelectorAll('table tr td:nth-child(-n + 2)'))
         return tds.map(p => p.innerText).reduce((acc, val, idx) =>
@@ -52,38 +52,42 @@ async function fetchAndAnalyzeRunners(page) {
                 : (acc ? `${acc},${val}` : `${val}`), '').split(',')
     });
 
-    const resolvedResults = await Promise.allSettled(
-        runners.map(runner => {
-            const [lastName, firstName] = runner.split(' ');
-            return getItraFromRunner(lastName, firstName);
-        })
-    );
-    return resolvedResults.filter(response => response.status == 'fulfilled').map(res => res.value);
+    return runners;
 }
 
-export default async function getAllRunners(raceName) {
+export default async function getAllRunners(raceName, url) {
+    console.log(raceName, url)
     const existingData = await dbService.getRunnersByRace(raceName);
     if (existingData.length) {
         return existingData;
     }
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    await page.goto(URL);
+    await page.goto(url);
 
-    let optionValue = await page.$$eval('option', options => options.find(o => o.innerText === "Le Malpassant")?.value)
+    page.on('console', async (msg) => {
+        const msgArgs = msg.args();
+        for (let i = 0; i < msgArgs.length; ++i) {
+            console.log(await msgArgs[i].jsonValue());
+        }
+    });
+
+    let optionValue = await page.$$eval('option', (options, raceName) => {
+        return options.find(o => o.innerText === raceName)?.value;
+    }, raceName)
     await page.select('select#competitions', optionValue);
     let optionItemPerPage = await page.$$eval('option', options => options.find(o => o.innerText === '100')?.value)
     await page.select('select#items_per_page', optionItemPerPage);
 
-    var results = []; // variable to hold collection of all runners
-    let lastPage = 0;
-    while (lastPage < 1) {
+    var namesList = []; // variable to hold collection of all runners
+    let lastPage;
+    while (!lastPage) {
         // wait 1 sec for page load
         await page.waitFor(2000);
 
-        const tmp = await fetchAndAnalyzeRunners(page);
-        results = results.concat(...tmp);
+        const results = await retrieveNames(page);
+        namesList = namesList.concat(...results);
 
         lastPage = await page.evaluate(() => {
             return document.querySelector('li.next-page.disabled');
@@ -91,13 +95,24 @@ export default async function getAllRunners(raceName) {
         if (!lastPage) {
             await page.click('li.next-page > a');
         }
-
     }
     await browser.close();
+    const results = await retrieveItraFromRunner(namesList);
 
     return mapData(results);
 }
 
+async function retrieveItraFromRunner(namesList) {
+    const resolvedResults = await Promise.allSettled(
+        namesList.map(runner => {
+            const [lastName, firstName] = runner.split(' ');
+            return getItraFromRunner(lastName, firstName);
+        })
+    );
+    return resolvedResults.filter(response => response.status == 'fulfilled').map(res => res.value);
+}
+
 function mapData(data) {
-    return data.reduce((acc, x) => acc.concat(x.results.length > 1 ? [x.results[0]] : x.results), []).filter(runner => runner.pi > 0)
+    const test = data.reduce((acc, x) => acc.concat(x.results.length > 1 ? [x.results[0]] : x.results), []).filter(runner => runner.pi > 0);
+    return test
 }
