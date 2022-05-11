@@ -1,4 +1,4 @@
-export async function analyzeLiveTrail(page) {
+export async function analyzeLiveTrail(page, raceName) {
     let optionValue = await page.$$eval('option', (options, raceName) => {
         return options.find(o => o.innerText === raceName)?.value;
     }, raceName)

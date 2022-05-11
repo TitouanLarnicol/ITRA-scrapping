@@ -1,13 +1,12 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
-import { DatabaseService } from './db/connect.js';
 import { analyzeLiveTrail } from './livetrail.js';
 import { analyzeLiveTrack } from './livetrack.js';
+import { dbService } from './db/connect.js';
 
-const dbService = new DatabaseService();
 
 // URL for data
-const EXAMPLE_URL = "https://inscriptions-l-chrono.com/trailnivoletrevard2022/registrations-list";
+const EXAMPLE_URL = "https://inscriptions-l-chrono.com/kvdepussy2022/registrations-list";
 const ITRA_URL = "https://itra.run/api/runner/find";
 const LIVE_TRAIL = 'registrations-list';
 const LIVE_TRACK = 'livetrack.me';
@@ -43,9 +42,15 @@ const getItraFromRunner = async (lastName, firstName) => {
     return runner;
 }
 
-export default async function getAllRunners(raceName, url) {
-    console.log(raceName, url)
-    const existingData = await dbService.getRunnersByRace(raceName);
+
+export async function getRaces() {
+    const res = await dbService.getRaces();
+    console.log(res);
+    return res;
+}
+
+export async function getAllRunners(raceName, url) {
+    const existingData = await dbService.getRunnersByRace(raceName, url);
     if (existingData.length) {
         return existingData;
     }
@@ -57,18 +62,29 @@ export default async function getAllRunners(raceName, url) {
     if (url.includes(LIVE_TRACK)) {
         nameList = await analyzeLiveTrack(page);
     } else {
-        nameList = await analyzeLiveTrail(page);
+        nameList = await analyzeLiveTrail(page, raceName);
     }
 
     await browser.close();
+    await dbService.addRace(url, raceName, 'IN PROGRESS');
+    storeRunnersInDB(nameList, raceName, url);
+    // const results = await retrieveItraFromRunner(nameList);
 
-    const results = await retrieveItraFromRunner(nameList);
+    return [];
+}
 
-    return mapData(results);
+async function storeRunnersInDB(namesList, raceName, url) {
+    for (let i = 0; i < namesList.length; i++) {
+        const [lastName, firstName] = namesList[i].toString().split(' ');
+        const runnerToStore = await getItraFromRunner(lastName, firstName);
+        if (runnerToStore.results.length) {
+            await dbService.addRunner(runnerToStore.results[0], url, raceName);
+        }
+    }
+    await updateStatus(url, raceName, 'COMPLETED')
 }
 
 async function retrieveItraFromRunner(namesList) {
-    console.log('first', namesList[0])
     const resolvedResults = await Promise.allSettled(
         namesList.map(runner => {
             const [lastName, firstName] = runner.toString().split(' ');
