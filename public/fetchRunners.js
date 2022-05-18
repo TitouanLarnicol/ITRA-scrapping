@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
 import { analyzeLiveTrail } from './livetrail.js';
-import { analyzeLiveTrack } from './livetrack.js';
+import { analyzeLiveTrack, getLiveTrackRaceName } from './livetrack.js';
 import { dbService } from './db/connect.js';
 
 
@@ -50,25 +50,43 @@ export async function getRaces() {
 }
 
 export async function getAllRunners(raceName, url) {
-    const existingData = await dbService.getRunnersByRace(raceName, url);
+    let existingData = [];
+    switch (true) {
+        case url.includes(LIVE_TRACK):
+            existingData = await dbService.getRunnersByRace('', url);
+            break;
+        default:
+            existingData = await dbService.getRunnersByRace(raceName, url);
+            break;
+    }
     if (existingData.length) {
         return existingData;
     }
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
-    await page.goto(url);
+    try {
+        await page.goto(url);
+    } catch (err) {
+        console.log('err', err)
+        return [];
+    }
     let nameList = [];
-    if (url.includes(LIVE_TRACK)) {
-        nameList = await analyzeLiveTrack(page);
-    } else {
-        nameList = await analyzeLiveTrail(page, raceName);
+    switch (true) {
+        case url.includes(LIVE_TRACK):
+            raceName = await getLiveTrackRaceName(page);
+            nameList = await analyzeLiveTrack(page);
+            break;
+        case url.includes(LIVE_TRAIL):
+            nameList = await analyzeLiveTrail(page, raceName);
+            break;
+        default:
+            return nameList;
     }
 
     await browser.close();
     await dbService.addRace(url, raceName, 'IN PROGRESS');
     storeRunnersInDB(nameList, raceName, url);
-    // const results = await retrieveItraFromRunner(nameList);
 
     return [];
 }
@@ -81,7 +99,7 @@ async function storeRunnersInDB(namesList, raceName, url) {
             await dbService.addRunner(runnerToStore.results[0], url, raceName);
         }
     }
-    await updateStatus(url, raceName, 'COMPLETED')
+    await dbService.updateStatus(url, raceName, 'COMPLETED')
 }
 
 async function retrieveItraFromRunner(namesList) {

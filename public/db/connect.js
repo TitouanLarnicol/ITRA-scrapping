@@ -19,7 +19,8 @@ export class DatabaseService {
         console.log('STATUS', existingStatus)
         if (!existingStatus) {
             this.db.run(
-                `INSERT INTO races(url, raceName, status) VALUES ('${url}', '${raceName}', '${status}');`,
+                `INSERT INTO races(url, raceName, status) VALUES (?, ?, ?);`,
+                [url, raceName, status].map(e => this.parseQuery(e))
             );
         }
     }
@@ -28,30 +29,42 @@ export class DatabaseService {
         const res = await this.getRaceId(url, raceName);
         if (res.raceId) {
             const runnerId = await this.db.run(
-                `INSERT INTO runners(firstName, lastName, pi, gender, nationality, ageGroup) VALUES ('${runner.firstName}', '${runner.lastName}', '${runner.pi}', '${runner.gender}', '${runner.nationality}', '${runner.ageGroup}');`,
+                `INSERT INTO runners(firstName, lastName, pi, gender, nationality, ageGroup) VALUES (?, ?, ?, ?, ?, ?);`,
+                [runner.firstName, runner.lastName, runner.pi, runner.gender, runner.nationality, runner.ageGroup].map(e => this.parseQuery(e))
             );
             await this.db.run(
-                `INSERT INTO runners_races(runnerId, raceId) VALUES ('${runnerId.lastID}', '${res.raceId}')`,
+                `INSERT INTO runners_races(runnerId, raceId) VALUES (?, ?)`,
+                [runnerId.lastID, res.raceId].map(e => this.parseQuery(e))
             );
         }
     }
 
     async updateStatus(url, raceName, status) {
         this.db.run(
-            `UPDATE races SET status = ${status} WHERE url = '${url}' AND raceName = '${raceName}'`,
+            `UPDATE races SET status = ? WHERE url = ? AND raceName = ?`,
+            [status, url, raceName].map(e => this.parseQuery(e)).map(e => `${e}`)
         );
     }
 
     async getRaceStatus(url, raceName) {
-        return await this.db.get(
-            `SELECT status FROM races WHERE url = '${url}' AND raceName = '${raceName}'`,
-        )
+        if (raceName) {
+            return await this.db.get(
+                `SELECT status FROM races WHERE url = '${url}' AND raceName = '${raceName}'`,
+            )
+        } else {
+            return await this.db.get(
+                `SELECT status FROM races WHERE url = '${url}'`,
+            )
+        }
+
     }
 
 
     async getRaceId(url, raceName) {
+        console.log('Get race by Id', url, raceName)
         return await this.db.get(
-            `SELECT raceId FROM races WHERE url = '${url}' AND raceName = '${raceName}'`,
+            `SELECT raceId FROM races WHERE url = ? AND raceName = ?`,
+            [url, raceName].map(e => this.parseQuery(e)).map(e => `${e}`)
         )
     }
 
@@ -63,14 +76,15 @@ export class DatabaseService {
 
     async getRunnersByRace(raceName, url) {
         const race = await this.getRaceStatus(url, raceName);
-        console.log('EXISTING stats', race.status, url, raceName);
-        if (race.status == 'COMPLETED') {
+        if (race && race.status == 'COMPLETED') {
+            console.log('Race already existing', url, raceName, race.status)
             return await this.db.all(
                 `SELECT runners.*
                 FROM races
                 INNER JOIN runners_races ON runners_races.raceId = races.raceId
                 INNER JOIN runners ON runners.runnerId = runners_races.runnerId
-                WHERE races.raceName = '${raceName}'`
+                WHERE races.url = ?`,
+                [url].map(e => this.parseQuery(e)).map(e => `${e}`)
             )
         } else {
             return [];
@@ -82,6 +96,10 @@ export class DatabaseService {
         return await this.db.all(
             `SELECT * FROM runners`
         );
+    }
+
+    parseQuery(str) {
+        return typeof str === 'string' ? str.replace(/[&#,+()$~%'"*?<>{}]/g, '') : str;
     }
 
     _initSQL() {

@@ -10,3 +10,11 @@ export async function analyzeLiveTrack(page) {
     });
     return runners;
 }
+
+export async function getLiveTrackRaceName(page) {
+    const nameOfTheRace = await page.evaluate(() => {
+        const title = document.querySelector('h2 span')
+        return title.innerText
+    });
+    return nameOfTheRace;
+}
