@@ -1,0 +1,4 @@
+export const ErrorId = {
+    WRONG_URL: "WRONG_URL",
+    PARSING_FORBIDDEN: "PARSING_FORBIDDEN"
+}

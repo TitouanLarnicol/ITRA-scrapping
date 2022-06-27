@@ -3,6 +3,8 @@ import fetch from 'node-fetch';
 import { analyzeLiveTrail } from './livetrail.js';
 import { analyzeLiveTrack, getLiveTrackRaceName } from './livetrack.js';
 import { dbService } from './db/connect.js';
+import { MyError } from './shared/MyError.js';
+import { ErrorId } from './shared/errorId.js';
 
 
 // URL for data
@@ -45,7 +47,6 @@ const getItraFromRunner = async (lastName, firstName) => {
 
 export async function getRaces() {
     const res = await dbService.getRaces();
-    console.log(res);
     return res;
 }
 
@@ -55,9 +56,11 @@ export async function getAllRunners(raceName, url) {
         case url.includes(LIVE_TRACK):
             existingData = await dbService.getRunnersByRace('', url);
             break;
-        default:
+        case url.includes(LIVE_TRAIL):
             existingData = await dbService.getRunnersByRace(raceName, url);
             break;
+        default:
+            return new MyError({ message: 'Wrong url', errorId: ErrorId.WRONG_URL, status: 404 });
     }
     if (existingData.length) {
         return existingData;
